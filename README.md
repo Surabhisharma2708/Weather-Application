@@ -1,18 +1,9 @@
-How to Run the App
+🌦 Weather Application
+HOW TO RUN THE APPLICATION:
 
-1.Clone the Repository:
-git clone https://github.com/Surabhisharma2708/Weather-Application.git
-cd Weather-Application
-
-2.Open the App:
-Open the index.html file in your web browser. You can double-click it or use a live server (like VSCode Live Server) for better performance.
-
-3.Search for Weather:
-Enter any city name in the search box.
-
-4.Click Search to see the current weather and 5-day forecast:
-Use the Toggles
-
-5.Click 📍 My Location to get your local weather.
-6.Click °C ⇄ °F to switch temperature units.
+1.Download the Project: Click the green Code button on GitHub.
+2.Select Download ZIP and extract it.
+3.Open the App: Open the index.html file in your web browser.You don’t need to install anything.
+4.Use the App:Type the name of any city in the search box.
+5.Click Search to see the weather:Use the buttons to check your location, switch °C/°F, or toggle dark mode.
 
