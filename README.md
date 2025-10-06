@@ -1,5 +1,4 @@
-🌦 Weather Application
-HOW TO RUN THE APPLICATION:
+HOW TO RUN THE WEATHER APPLICATION:
 
 1.Download the Project: Click the green Code button on GitHub.
 
