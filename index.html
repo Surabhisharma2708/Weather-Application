@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Professional Weather App</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+      transition: background 0.5s, color 0.3s ease;
+    }
+
+    body {
+      background: linear-gradient(135deg, #2c3e50, #4ca1af);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 480px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+    }
+
+    .search {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    input {
+      padding: 10px;
+      width: 70%;
+      border: none;
+      outline: none;
+      border-radius: 10px 0 0 10px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.8);
+      color: #000;
+    }
+
+    button {
+      padding: 10px 15px;
+      border: none;
+      background: #ffb703;
+      color: #000;
+      font-weight: bold;
+      border-radius: 0 10px 10px 0;
+      cursor: pointer;
+    }
+
+    .toggle {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    .toggle button {
+      background: rgba(255,255,255,0.3);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .weather {
+      margin-top: 20px;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .weather img {
+      width: 80px;
+    }
+
+    .details p {
+      margin: 6px 0;
+      font-size: 1rem;
+    }
+
+    .forecast {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .forecast-day {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin: 5px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    #chartContainer {
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 10px;
+    }
+
+    .error {
+      background: rgba(255, 0, 0, 0.4);
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    #clock {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dark-mode {
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+
+    @media (max-width: 400px) {
+      input { width: 60%; }
+      .container { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="container">
+    <h2>🌦 Weather App</h2>
+    <div class="search">
+      <input type="text" id="cityInput" placeholder="Enter city..." autofocus>
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="toggle">
+      <button id="locationBtn">📍 My Location</button>
+      <button id="unitBtn">°C ⇄ °F</button>
+      <button id="modeBtn">🌙 Mode</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="clock"></div>
+    <div class="weather" id="weather"></div>
+    <div class="forecast" id="forecast"></div>
+    <div id="chartContainer">
+      <canvas id="forecastChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = "9f40f34aef434824a7a130110250610";
+    const BASE_URL = "http://api.weatherapi.com/v1";
+
+    const cityInput = document.getElementById("cityInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const locationBtn = document.getElementById("locationBtn");
+    const unitBtn = document.getElementById("unitBtn");
+    const modeBtn = document.getElementById("modeBtn");
+    const weatherDiv = document.getElementById("weather");
+    const forecastDiv = document.getElementById("forecast");
+    const statusDiv = document.getElementById("status");
+    const clockDiv = document.getElementById("clock");
+
+    let forecastChart = null;
+    let clockInterval = null;
+
+    let state = {
+      loading: false,
+      error: null,
+      data: null,
+      forecast: null,
+      unit: "C",
+      darkMode: false
+    };
+
+    async function fetchWeather(city) {
+      state.loading = true;
+      state.error = null;
+      updateUI();
+
+      try {
+        const currentRes = await fetch(`${BASE_URL}/current.json?key=${API_KEY}&q=${city}&aqi=no`);
+        const forecastRes = await fetch(`${BASE_URL}/forecast.json?key=${API_KEY}&q=${city}&days=5&aqi=no`);
+        if (!currentRes.ok || !forecastRes.ok) throw new Error("City not found");
+
+        const currentData = await currentRes.json();
+        const forecastData = await forecastRes.json();
+        state.data = currentData;
+        state.forecast = forecastData.forecast.forecastday;
+
+        localStorage.setItem("lastCity", city);
+        changeBackground(currentData.current.condition.text.toLowerCase());
+        startClock(currentData.location.localtime);
+      } catch (err) {
+        state.error = err.message;
+      } finally {
+        state.loading = false;
+        updateUI();
+      }
+    }
+
+    function startClock(localtime) {
+      if (clockInterval) clearInterval(clockInterval);
+
+      const baseTime = new Date(localtime.replace(" ", "T"));
+      clockInterval = setInterval(() => {
+        baseTime.setSeconds(baseTime.getSeconds() + 1);
+        clockDiv.textContent = "🕒 Local Time: " + baseTime.toLocaleTimeString();
+      }, 1000);
+    }
+
+    function updateUI() {
+      weatherDiv.innerHTML = "";
+      forecastDiv.innerHTML = "";
+      statusDiv.innerHTML = "";
+
+      if (state.loading) {
+        statusDiv.innerHTML = `<p>Loading...</p>`;
+        return;
+      }
+
+      if (state.error) {
+        statusDiv.innerHTML = `<p class="error">${state.error}</p>`;
+        return;
+      }
+
+      if (state.data) {
+        const { location, current } = state.data;
+        const temp = state.unit === "C" ? `${current.temp_c}°C` : `${(current.temp_c * 9/5 + 32).toFixed(1)}°F`;
+        const feels = state.unit === "C" ? `${current.feelslike_c}°C` : `${(current.feelslike_c * 9/5 + 32).toFixed(1)}°F`;
+
+        weatherDiv.innerHTML = `
+          <h3>${location.name}, ${location.country}</h3>
+          <img src="https:${current.condition.icon}" alt="${current.condition.text}">
+          <div class="details">
+            <p>🌡 Temperature: ${temp} (Feels like ${feels})</p>
+            <p>💧 Humidity: ${current.humidity}%</p>
+            <p>🌬 Wind: ${current.wind_kph} km/h</p>
+            <p>☁ Condition: ${current.condition.text}</p>
+            <p>🌅 Sunrise: ${state.forecast[0].astro.sunrise}</p>
+            <p>🌇 Sunset: ${state.forecast[0].astro.sunset}</p>
+          </div>
+        `;
+      }
+
+      if (state.forecast) {
+        forecastDiv.innerHTML = `<h4>5-Day Forecast:</h4>`;
+        const labels = [];
+        const temps = [];
+
+        state.forecast.forEach(day => {
+          const date = new Date(day.date).toDateString().split(' ').slice(0,3).join(' ');
+          const tempVal = state.unit === "C" ? day.day.avgtemp_c : (day.day.avgtemp_c * 9/5 + 32);
+          labels.push(date);
+          temps.push(tempVal.toFixed(1));
+
+          forecastDiv.innerHTML += `
+            <div class="forecast-day">
+              <span>${date}</span>
+              <span>${tempVal.toFixed(1)}°${state.unit} | ${day.day.condition.text}</span>
+            </div>
+          `;
+        });
+
+        renderChart(labels, temps);
+      }
+    }
+
+    function renderChart(labels, temps) {
+      const ctx = document.getElementById("forecastChart").getContext("2d");
+      if (forecastChart) forecastChart.destroy();
+      forecastChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: `Temperature (°${state.unit})`,
+            data: temps,
+            borderColor: "#ffb703",
+            tension: 0.3,
+            fill: true,
+            backgroundColor: "rgba(255,183,3,0.2)"
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: false } },
+          responsive: true,
+        }
+      });
+    }
+
+    function changeBackground(condition) {
+      if (condition.includes("rain")) {
+        document.body.style.background = "linear-gradient(135deg, #1e3c72, #2a5298)";
+      } else if (condition.includes("cloud")) {
+        document.body.style.background = "linear-gradient(135deg, #757f9a, #d7dde8)";
+      } else if (condition.includes("sun") || condition.includes("clear")) {
+        document.body.style.background = "linear-gradient(135deg, #f7971e, #ffd200)";
+      } else {
+        document.body.style.background = "linear-gradient(135deg, #2c3e50, #4ca1af)";
+      }
+    }
+
+    locationBtn.addEventListener("click", () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          fetchWeather(`${lat},${lon}`);
+        }, () => alert("Location access denied."));
+      } else alert("Geolocation not supported.");
+    });
+
+    unitBtn.addEventListener("click", () => {
+      state.unit = state.unit === "C" ? "F" : "C";
+      updateUI();
+    });
+
+    modeBtn.addEventListener("click", () => {
+      state.darkMode = !state.darkMode;
+      document.body.classList.toggle("dark-mode", state.darkMode);
+    });
+
+    searchBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim();
+      if (city) fetchWeather(city);
+    });
+
+    window.addEventListener("load", () => {
+      const lastCity = localStorage.getItem("lastCity");
+      if (lastCity) fetchWeather(lastCity);
+    });
+  </script>
+</body>
+</html>
+
