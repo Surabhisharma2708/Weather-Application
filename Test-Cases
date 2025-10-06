@@ -1,0 +1,6 @@
+🧪 Instructions for Running Test Cases: Currently, this application does not include automated test cases. However, you can manually test the following scenarios:
+
+1.City Search: Enter a valid city name (e.g., "Pune") and verify that the current weather and 5-day forecast are displayed correctly.
+2.Geolocation: Click on "📍 My Location" and ensure that the app fetches and displays weather data based on your current location.
+3.Temperature Unit Toggle: Toggle between Celsius and Fahrenheit and verify that the temperature values update accordingly.
+
